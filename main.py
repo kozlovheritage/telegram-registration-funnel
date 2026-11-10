@@ -51,11 +51,6 @@ def dashboard_url() -> str | None:
         if urlparse(configured_url).scheme == "https":
             return configured_url
         logger.warning("WEB_APP_URL must use HTTPS to open inside Telegram")
-        return None
-
-    replit_domain = os.getenv("REPLIT_DEV_DOMAIN", "").strip()
-    if replit_domain:
-        return f"https://{replit_domain}/"
     return None
 
 
@@ -83,11 +78,24 @@ def create_router(db: Database, config: dict[str, Any]) -> Router:
     async def start(message: Message) -> None:
         if message.from_user is None:
             return
+        already_registered = db.has_phone(message.from_user.id)
         db.register_start(
             message.from_user.id,
             message.from_user.username,
             message.from_user.first_name,
         )
+        if already_registered:
+            await message.answer(texts["welcome_registered"])
+            reply_markup = dashboard_markup(texts)
+            if reply_markup:
+                await message.answer(
+                    texts["dashboard_prompt"],
+                    reply_markup=reply_markup,
+                )
+            else:
+                await message.answer(texts["local_dashboard"])
+            return
+
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
                 [
