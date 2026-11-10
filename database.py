@@ -171,3 +171,4 @@ class Database:
                 for index, row in enumerate(recent, start=1)
             ],
         }
+
