@@ -10,12 +10,15 @@
 ## Запуск локально
 
 ```bash
-cd telegram-funnel
+# После клонирования публичного репозитория:
+cd telegram-registration-funnel
 python -m venv .venv
 source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
+
+В текущем Replit-проекте папка приложения называется `telegram-funnel`, поэтому здесь используйте `cd telegram-funnel`.
 
 Добавьте токен в `.env`:
 
