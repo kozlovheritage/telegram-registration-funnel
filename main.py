@@ -59,6 +59,22 @@ def dashboard_url() -> str | None:
     return None
 
 
+def dashboard_markup(texts: dict[str, Any]) -> InlineKeyboardMarkup | None:
+    web_url = dashboard_url()
+    if not web_url:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=texts["dashboard_button"],
+                    web_app=WebAppInfo(url=web_url),
+                )
+            ]
+        ]
+    )
+
+
 def create_router(db: Database, config: dict[str, Any]) -> Router:
     router = Router()
     texts = config["texts"]
@@ -73,7 +89,14 @@ def create_router(db: Database, config: dict[str, Any]) -> Router:
             message.from_user.first_name,
         )
         keyboard = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="Отправить номер", request_contact=True)]],
+            keyboard=[
+                [
+                    KeyboardButton(
+                        text=texts["phone_button"],
+                        request_contact=True,
+                    )
+                ]
+            ],
             resize_keyboard=True,
             one_time_keyboard=True,
         )
@@ -101,29 +124,27 @@ def create_router(db: Database, config: dict[str, Any]) -> Router:
                 texts["phone_already_received"],
                 reply_markup=ReplyKeyboardRemove(),
             )
+            reply_markup = dashboard_markup(texts)
+            if reply_markup:
+                await message.answer(
+                    texts["dashboard_prompt"],
+                    reply_markup=reply_markup,
+                )
+            else:
+                await message.answer(texts["local_dashboard"])
             return
 
-        web_url = dashboard_url()
-        if web_url:
-            reply_markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="Открыть дашборд",
-                            web_app=WebAppInfo(url=web_url),
-                        )
-                    ]
-                ]
-            )
-        else:
-            reply_markup = None
+        reply_markup = dashboard_markup(texts)
 
         await message.answer(
             texts["phone_received"],
             reply_markup=ReplyKeyboardRemove(),
         )
         if reply_markup:
-            await message.answer("Статистика воронки:", reply_markup=reply_markup)
+            await message.answer(
+                texts["dashboard_prompt"],
+                reply_markup=reply_markup,
+            )
         else:
             await message.answer(texts["local_dashboard"])
 
