@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import yaml
 from aiogram import Bot, Dispatcher, F, Router
@@ -47,7 +48,10 @@ def load_config() -> dict[str, Any]:
 def dashboard_url() -> str | None:
     configured_url = os.getenv("WEB_APP_URL", "").strip()
     if configured_url:
-        return configured_url
+        if urlparse(configured_url).scheme == "https":
+            return configured_url
+        logger.warning("WEB_APP_URL must use HTTPS to open inside Telegram")
+        return None
 
     replit_domain = os.getenv("REPLIT_DEV_DOMAIN", "").strip()
     if replit_domain:
@@ -175,7 +179,10 @@ async def main() -> None:
         )
 
     config = load_config()
-    db = Database(os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "bot.sqlite3")))
+    database_path = Path(os.getenv("DATABASE_PATH", "data/bot.sqlite3"))
+    if not database_path.is_absolute():
+        database_path = BASE_DIR / database_path
+    db = Database(str(database_path))
     bot = Bot(
         token=token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
