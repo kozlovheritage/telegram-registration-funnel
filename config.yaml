@@ -5,6 +5,9 @@ texts:
   phone_received: "Спасибо, регистрация завершена. Дашборд показывает статистику этой воронки."
   phone_already_received: "Твой номер уже зарегистрирован."
   local_dashboard: "Дашборд доступен в браузере: http://localhost:8000"
+  phone_button: "Отправить номер"
+  dashboard_button: "Открыть дашборд"
+  dashboard_prompt: "Статистика воронки:"
 
 follow_up_messages:
   - delay_seconds: 10
