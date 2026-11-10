@@ -18,7 +18,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-В текущем Replit-проекте папка приложения называется `telegram-funnel`, поэтому здесь используйте `cd telegram-funnel`.
+В текущем проекте папка приложения называется `telegram-funnel`, поэтому здесь используйте `cd telegram-funnel`.
 
 Добавьте токен в `.env`:
 
