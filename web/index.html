@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3f6fa" />
+    <title>Статистика бота</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #17283e;
+        background: #f3f6fa;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      main { width: min(100% - 32px, 980px); margin: 0 auto; padding: 32px 0 48px; }
+      .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      .eyebrow { margin: 0 0 8px; color: #61748a; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: clamp(28px, 5vw, 38px); letter-spacing: -.04em; }
+      .updated { color: #738398; font-size: 13px; white-space: nowrap; }
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 20px; }
+      .card, .panel { border: 1px solid #e2e8ef; border-radius: 16px; background: #fff; box-shadow: 0 5px 20px #24364b08; }
+      .card { padding: 20px; }
+      .label { color: #687b90; font-size: 13px; font-weight: 600; }
+      .value { display: block; margin-top: 13px; font-size: 34px; font-weight: 750; letter-spacing: -.05em; }
+      .panel { overflow: hidden; }
+      .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px; border-bottom: 1px solid #edf1f5; }
+      h2 { margin: 0; font-size: 17px; }
+      .refresh { border: 0; border-radius: 9px; padding: 9px 12px; color: #fff; background: #2378df; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+      .refresh:hover { background: #1767c7; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; text-align: left; }
+      th, td { padding: 14px 22px; border-bottom: 1px solid #f0f3f6; white-space: nowrap; }
+      th { color: #76869a; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+      td { font-size: 14px; }
+      tr:last-child td { border-bottom: 0; }
+      .status { display: inline-flex; align-items: center; gap: 7px; color: #62758b; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: #bbc6d2; }
+      .status.done { color: #148054; }
+      .status.done .dot { background: #21a36a; }
+      .empty, .error { padding: 28px 22px; color: #718198; text-align: center; font-size: 14px; }
+      .error { color: #ae3f47; }
+      @media (max-width: 720px) {
+        main { padding-top: 24px; }
+        .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .card { padding: 16px; }
+        .value { font-size: 29px; }
+      }
+      @media (max-width: 420px) {
+        .topline { align-items: flex-start; flex-direction: column; }
+        .updated { white-space: normal; }
+        .panel-head { padding: 16px; }
+        th, td { padding: 12px 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="topline">
+        <div>
+          <p class="eyebrow">Telegram · регистрационная воронка</p>
+          <h1>Статистика бота</h1>
+        </div>
+        <div class="updated" id="updated">Загружаем данные…</div>
+      </header>
+
+      <section class="grid" aria-label="Сводная статистика">
+        <article class="card"><span class="label">Запуски /start</span><strong class="value" id="starts">—</strong></article>
+        <article class="card"><span class="label">Пользователи</span><strong class="value" id="users">—</strong></article>
+        <article class="card"><span class="label">Телефоны получены</span><strong class="value" id="phones">—</strong></article>
+        <article class="card"><span class="label">Конверсия в регистрацию</span><strong class="value" id="conversion">—</strong></article>
+      </section>
+
+      <section class="panel" aria-labelledby="recent-title">
+        <div class="panel-head">
+          <h2 id="recent-title">Последние пользователи</h2>
+          <button class="refresh" id="refresh" type="button">Обновить</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Пользователь</th><th>Начал</th><th>Телефон</th></tr>
+            </thead>
+            <tbody id="recent">
+              <tr><td colspan="3" class="empty">Загружаем данные…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script>
+      const telegramApp = window.Telegram?.WebApp;
+      telegramApp?.ready();
+      telegramApp?.expand();
+
+      const formatDate = (value) => {
+        if (!value) return "—";
+        return new Intl.DateTimeFormat("ru-RU", {
+          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+        }).format(new Date(value));
+      };
+
+      async function refreshDashboard() {
+        const recent = document.querySelector("#recent");
+        try {
+          const response = await fetch("./api/stats", { cache: "no-store" });
+          if (!response.ok) throw new Error("Не удалось получить статистику");
+          const data = await response.json();
+          document.querySelector("#starts").textContent = data.starts;
+          document.querySelector("#users").textContent = data.users;
+          document.querySelector("#phones").textContent = data.phones;
+          document.querySelector("#conversion").textContent = `${data.conversion}%`;
+          recent.replaceChildren();
+          if (!data.recent_users.length) {
+            recent.innerHTML = '<tr><td colspan="3" class="empty">Пока нет регистраций. Нажмите /start в боте.</td></tr>';
+          } else {
+            for (const user of data.recent_users) {
+              const row = document.createElement("tr");
+              const username = user.username ? `@${user.username}` : user.name;
+              row.innerHTML = `<td></td><td>${formatDate(user.started_at)}</td><td></td>`;
+              row.children[0].textContent = username;
+              const status = document.createElement("span");
+              status.className = `status ${user.phone_received ? "done" : ""}`;
+              status.innerHTML = `<span class="dot"></span>${user.phone_received ? "Получен" : "Ожидается"}`;
+              row.children[2].append(status);
+              recent.append(row);
+            }
+          }
+          document.querySelector("#updated").textContent = `Сообщений отправлено: ${data.messages_sent} · Обновлено ${new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`;
+        } catch (error) {
+          recent.innerHTML = '<tr><td colspan="3" class="error">Не удалось загрузить статистику. Проверьте, что бот запущен.</td></tr>';
+          document.querySelector("#updated").textContent = error.message;
+        }
+      }
+
+      document.querySelector("#refresh").addEventListener("click", refreshDashboard);
+      refreshDashboard();
+      setInterval(refreshDashboard, 10000);
+    </script>
+  </body>
+</html>
