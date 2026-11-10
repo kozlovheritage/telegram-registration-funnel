@@ -139,7 +139,7 @@ class Database:
             ).fetchone()[0]
             recent = connection.execute(
                 """
-                SELECT user_id, username, first_name, started_at, phone_received_at
+                SELECT started_at, phone_received_at
                 FROM users
                 ORDER BY started_at DESC
                 LIMIT 10
@@ -156,11 +156,10 @@ class Database:
             "messages_sent": int(sent),
             "recent_users": [
                 {
-                    "name": row["first_name"] or row["username"] or f"User {row['user_id']}",
-                    "username": row["username"],
+                    "name": f"Пользователь {index}",
                     "started_at": row["started_at"],
                     "phone_received": bool(row["phone_received_at"]),
                 }
-                for row in recent
+                for index, row in enumerate(recent, start=1)
             ],
         }
