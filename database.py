@@ -70,6 +70,14 @@ class Database:
                 (user_id, username, first_name, now),
             )
 
+    def has_phone(self, user_id: int) -> bool:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT phone_received_at FROM users WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        return bool(row and row["phone_received_at"])
+
     def register_phone(
         self,
         user_id: int,
